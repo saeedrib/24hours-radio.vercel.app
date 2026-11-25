@@ -3,28 +3,27 @@
 Mobile-first radio station website and staff portal.
 
 ## Files
-- `index.html` — public station website and online player.
+- `index.html` — public station website, online player, and live content feed.
 - `admin.html` — Admin/DJ staff portal.
 - `admin.js` — staff sign-in and content management.
-- `supabase-config.js` — public Supabase URL/key placeholders only.
+- `supabase-config.js` — public Supabase URL and publishable key only.
 - `supabase/schema.sql` — database tables, role controls, and Row Level Security policies.
+
+## Supabase connection
+The radio system is connected to the existing **Student Loan Found** Supabase project. Radio data is isolated in six new `radio_*` tables with Row Level Security enabled. Existing student-loan, NFPS, and Shafa tables were not modified.
+
+The public website reads published programs, presenters, news, podcasts, and the live stream URL from these radio tables. Staff use `admin.html` to manage station content.
+
+## First Admin setup
+1. Create a staff account in Supabase Authentication (email/password).
+2. Send the exact account email to the project owner/admin so that the account can be promoted to the first Radio Admin.
+3. The first Radio Admin can then assign DJ roles from the staff portal.
+4. Do not allow public visitors to choose an Admin or DJ role.
+
+The frontend uses only the Supabase publishable key. Never expose a service-role or secret key.
 
 ## Deploy to Vercel
 Import this repository into Vercel. Select Framework Preset **Other**, leave Build Command empty, and set Output Directory to `.`.
 
-## Supabase connection (blocked by free-project limit)
-A separate Supabase project could not be created because the account has reached its two active free-project limit. This radio project has NOT been connected to another project's database. When a dedicated radio project is available:
-1. Run `supabase/schema.sql` in its SQL Editor.
-2. Put its Project URL and publishable/anon key in `supabase-config.js`.
-3. Create the first account in Supabase Auth.
-4. Promote the first Admin using the commented SQL at the bottom of `supabase/schema.sql` (replace the email).
-5. Add DJ accounts in Supabase Auth, then use the Admin staff-role panel to assign the DJ role.
-6. Save a real HTTPS radio stream URL from the Admin dashboard.
-
-Only the publishable/anon key belongs in frontend code. Never expose a service-role key.
-
 ## Live radio and FM
-The website player needs a real audio stream URL from an Icecast/SHOUTcast server or streaming provider. FM transmission also requires a licensed frequency and transmitter/studio equipment. Neither is automatically supplied by this repository.
-
-## Current readiness
-The website and Admin/DJ portal files are in GitHub and ready for Vercel deployment as a static site. Supabase login and shared content management remain inactive until the dedicated database is connected.
+The website player still needs a real HTTPS audio stream URL from an Icecast/SHOUTcast server or streaming provider. Save it from the Admin dashboard after the first Admin is enabled. FM transmission also requires a licensed frequency and transmitter/studio equipment. Neither is automatically supplied by this repository.
