@@ -118,3 +118,44 @@ grant execute on function public.radio_is_staff(), public.radio_is_admin() to au
 -- IMPORTANT: After creating your first account, promote it manually in SQL Editor:
 -- update public.radio_profiles set role='admin' where user_id=(select id from auth.users where email='YOUR-EMAIL');
 -- Add DJ accounts similarly with role='dj'. Never allow public signup to choose admin/DJ role.
+
+-- Create a listener profile automatically for every new Auth account.
+create or replace function public.radio_handle_new_user()
+returns trigger language plpgsql security definer set search_path = ''
+as $$
+begin
+  insert into public.radio_profiles(user_id, display_name, role)
+  values (new.id, coalesce(new.raw_user_meta_data->>'display_name',''), 'listener')
+  on conflict (user_id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created_radio on auth.users;
+create trigger on_auth_user_created_radio
+after insert on auth.users
+for each row execute procedure public.radio_handle_new_user();
+
+-- Only an existing Admin can change a user's role. Never trust a role sent by signup metadata.
+create or replace function public.radio_admin_set_role(target_email text, target_role text)
+returns void language plpgsql security definer set search_path = ''
+as $$
+declare target_id uuid;
+begin
+  if not public.radio_is_admin() then
+    raise exception 'Only radio administrators can assign staff roles';
+  end if;
+  if target_role not in ('listener','dj','admin') then
+    raise exception 'Invalid role';
+  end if;
+  select id into target_id from auth.users where lower(email) = lower(trim(target_email)) limit 1;
+  if target_id is null then
+    raise exception 'No Auth account found for that email';
+  end if;
+  insert into public.radio_profiles(user_id, display_name, role)
+  values (target_id, '', target_role)
+  on conflict (user_id) do update set role = excluded.role;
+end;
+$$;
+revoke all on function public.radio_admin_set_role(text,text) from public, anon;
+grant execute on function public.radio_admin_set_role(text,text) to authenticated;
