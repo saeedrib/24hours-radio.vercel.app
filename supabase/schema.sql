@@ -1,5 +1,7 @@
 -- 24HOURS RADIO database schema
--- Run this file in Supabase SQL Editor after creating the dedicated radio project.
+-- Radio-only tables for the shared Student Loan Found Supabase project.
+-- All radio objects are prefixed radio_; do not modify student-loan/NFPS tables.
+create schema if not exists private;
 create extension if not exists pgcrypto;
 
 create table if not exists public.radio_profiles (
@@ -55,7 +57,7 @@ create table if not exists public.radio_settings (
   updated_at timestamptz not null default now()
 );
 
-create or replace function public.radio_is_staff()
+create or replace function private.radio_is_staff()
 returns boolean language sql stable security definer set search_path = ''
 as $$
   select exists (
@@ -64,7 +66,7 @@ as $$
   );
 $$;
 
-create or replace function public.radio_is_admin()
+create or replace function private.radio_is_admin()
 returns boolean language sql stable security definer set search_path = ''
 as $$
   select exists (
@@ -135,6 +137,7 @@ drop trigger if exists on_auth_user_created_radio on auth.users;
 create trigger on_auth_user_created_radio
 after insert on auth.users
 for each row execute procedure public.radio_handle_new_user();
+revoke all on function public.radio_handle_new_user() from public, anon, authenticated;
 
 -- Only an existing Admin can change a user's role. Never trust a role sent by signup metadata.
 create or replace function public.radio_admin_set_role(target_email text, target_role text)
