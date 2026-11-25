@@ -85,37 +85,39 @@ alter table public.radio_settings enable row level security;
 drop policy if exists "Users read own radio profile" on public.radio_profiles;
 create policy "Users read own radio profile" on public.radio_profiles for select to authenticated using (user_id = (select auth.uid()));
 drop policy if exists "Admins manage radio profiles" on public.radio_profiles;
-create policy "Admins manage radio profiles" on public.radio_profiles for all to authenticated using ((select public.radio_is_admin())) with check ((select public.radio_is_admin()));
+create policy "Admins manage radio profiles" on public.radio_profiles for all to authenticated using ((select private.radio_is_admin())) with check ((select private.radio_is_admin()));
 
 drop policy if exists "Public read published programs" on public.radio_programs;
-create policy "Public read published programs" on public.radio_programs for select to anon, authenticated using (is_published or (select public.radio_is_staff()));
+create policy "Public read published programs" on public.radio_programs for select to anon, authenticated using (is_published or (select private.radio_is_staff()));
 drop policy if exists "Staff manage programs" on public.radio_programs;
-create policy "Staff manage programs" on public.radio_programs for all to authenticated using ((select public.radio_is_staff())) with check ((select public.radio_is_staff()));
+create policy "Staff manage programs" on public.radio_programs for all to authenticated using ((select private.radio_is_staff())) with check ((select private.radio_is_staff()));
 
 drop policy if exists "Public read published presenters" on public.radio_presenters;
-create policy "Public read published presenters" on public.radio_presenters for select to anon, authenticated using (is_published or (select public.radio_is_staff()));
+create policy "Public read published presenters" on public.radio_presenters for select to anon, authenticated using (is_published or (select private.radio_is_staff()));
 drop policy if exists "Staff manage presenters" on public.radio_presenters;
-create policy "Staff manage presenters" on public.radio_presenters for all to authenticated using ((select public.radio_is_staff())) with check ((select public.radio_is_staff()));
+create policy "Staff manage presenters" on public.radio_presenters for all to authenticated using ((select private.radio_is_staff())) with check ((select private.radio_is_staff()));
 
 drop policy if exists "Public read published news" on public.radio_news;
-create policy "Public read published news" on public.radio_news for select to anon, authenticated using (is_published or (select public.radio_is_staff()));
+create policy "Public read published news" on public.radio_news for select to anon, authenticated using (is_published or (select private.radio_is_staff()));
 drop policy if exists "Staff manage news" on public.radio_news;
-create policy "Staff manage news" on public.radio_news for all to authenticated using ((select public.radio_is_staff())) with check ((select public.radio_is_staff()));
+create policy "Staff manage news" on public.radio_news for all to authenticated using ((select private.radio_is_staff())) with check ((select private.radio_is_staff()));
 
 drop policy if exists "Public read published podcasts" on public.radio_podcasts;
-create policy "Public read published podcasts" on public.radio_podcasts for select to anon, authenticated using (is_published or (select public.radio_is_staff()));
+create policy "Public read published podcasts" on public.radio_podcasts for select to anon, authenticated using (is_published or (select private.radio_is_staff()));
 drop policy if exists "Staff manage podcasts" on public.radio_podcasts;
-create policy "Staff manage podcasts" on public.radio_podcasts for all to authenticated using ((select public.radio_is_staff())) with check ((select public.radio_is_staff()));
+create policy "Staff manage podcasts" on public.radio_podcasts for all to authenticated using ((select private.radio_is_staff())) with check ((select private.radio_is_staff()));
 
 drop policy if exists "Public read live settings" on public.radio_settings;
 create policy "Public read live settings" on public.radio_settings for select to anon, authenticated using (setting_key in ('stream_url','station_name','whatsapp'));
 drop policy if exists "Admins manage settings" on public.radio_settings;
-create policy "Admins manage settings" on public.radio_settings for all to authenticated using ((select public.radio_is_admin())) with check ((select public.radio_is_admin()));
+create policy "Admins manage settings" on public.radio_settings for all to authenticated using ((select private.radio_is_admin())) with check ((select private.radio_is_admin()));
 
 grant select on public.radio_programs, public.radio_presenters, public.radio_news, public.radio_podcasts, public.radio_settings to anon, authenticated;
 grant all on public.radio_programs, public.radio_presenters, public.radio_news, public.radio_podcasts, public.radio_settings to authenticated;
 grant select, update on public.radio_profiles to authenticated;
-grant execute on function public.radio_is_staff(), public.radio_is_admin() to authenticated;
+grant usage on schema private to authenticated;
+revoke all on function private.radio_is_staff(), private.radio_is_admin() from public, anon;
+grant execute on function private.radio_is_staff(), private.radio_is_admin() to authenticated;
 
 -- IMPORTANT: After creating your first account, promote it manually in SQL Editor:
 -- update public.radio_profiles set role='admin' where user_id=(select id from auth.users where email='YOUR-EMAIL');
@@ -145,7 +147,7 @@ returns void language plpgsql security definer set search_path = ''
 as $$
 declare target_id uuid;
 begin
-  if not public.radio_is_admin() then
+  if not private.radio_is_admin() then
     raise exception 'Only radio administrators can assign staff roles';
   end if;
   if target_role not in ('listener','dj','admin') then
