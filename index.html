@@ -37,4 +37,31 @@ audio.addEventListener('ended',()=>play.textContent='▶');audio.addEventListene
 document.getElementById('saveStream').addEventListener('click',()=>{const u=document.getElementById('streamUrl').value.trim();if(!/^https?:\/\//i.test(u)){statusText.textContent='Please enter a valid http or https stream URL.';return;}setStream(u);statusText.textContent='Stream loaded on this device. Press play to test.';});
 document.getElementById('year').textContent=new Date().getFullYear();
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script>
+(async function connectRadioContent(){
+  if(!window.supabase || !window.RADIO_SUPABASE_URL || !window.RADIO_SUPABASE_ANON_KEY) return;
+  const db=window.supabase.createClient(window.RADIO_SUPABASE_URL,window.RADIO_SUPABASE_ANON_KEY);
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const [settings,programs,presenters,news,podcasts]=await Promise.all([
+    db.from('radio_settings').select('setting_key,setting_value').in('setting_key',['stream_url','station_name','whatsapp']),
+    db.from('radio_programs').select('*').eq('is_published',true).order('created_at',{ascending:false}),
+    db.from('radio_presenters').select('*').eq('is_published',true).order('created_at',{ascending:false}),
+    db.from('radio_news').select('*').eq('is_published',true).order('created_at',{ascending:false}).limit(5),
+    db.from('radio_podcasts').select('*').eq('is_published',true).order('created_at',{ascending:false}).limit(6)
+  ]);
+  const settingMap=Object.fromEntries((settings.data||[]).map(x=>[x.setting_key,x.setting_value]));
+  if(settingMap.stream_url && typeof setStream==='function') setStream(settingMap.stream_url);
+  if(settingMap.station_name){document.title=settingMap.station_name+' | Live 24/7';const brand=document.querySelector('.brand');if(brand)brand.querySelector('span:nth-child(2)').innerHTML=esc(settingMap.station_name)+'<small>YOUR VOICE. YOUR WORLD.</small>';}
+  if(settingMap.whatsapp){const wa=document.querySelector('.cta a');if(wa)wa.href=/^https:\/\//.test(settingMap.whatsapp)?settingMap.whatsapp:'https://wa.me/'+settingMap.whatsapp.replace(/\D/g,'');}
+  if(programs.data && programs.data.length){const el=document.getElementById('programCards');el.innerHTML=programs.data.map(p=>'<article class="card"><div class="time">'+esc(p.start_time)+' — '+esc(p.end_time)+'</div><h3>'+esc(p.title)+'</h3><p>'+esc(p.description)+(p.presenter?' • '+esc(p.presenter):'')+'</p></article>').join('');}
+  if(presenters.data && presenters.data.length){const el=document.querySelector('#presenters .cards');el.innerHTML=presenters.data.map(p=>'<article class="card host">'+(p.photo_url?'<img src="'+esc(p.photo_url)+'" alt="" style="width:52px;height:52px;border-radius:50%;object-fit:cover">':'<div class="avatar">'+esc((p.name||'24').slice(0,2).toUpperCase())+'</div>')+'<div><h3>'+esc(p.name)+'</h3><p>'+esc(p.show_name||p.bio)+'</p></div></article>').join('');}
+  if(news.data && news.data.length){const root=document.querySelector('#news .news');root.innerHTML='<div class="newsSide">'+news.data.slice(0,1).map(n=>'<article class="newsMain"><div class="eyebrow">24HOURS UPDATE</div><h2>'+esc(n.title)+'</h2><p>'+esc(n.summary||n.body)+'</p></article></div><div class="newsSide">'+news.data.slice(1).map(n=>'<article class="newsItem"><h3>'+esc(n.title)+'</h3><p>'+esc(n.summary)+'</p></article>').join('')+'</div>';}
+  if(podcasts.data && podcasts.data.length){const el=document.querySelector('#podcasts .cards');el.innerHTML=podcasts.data.map(p=>'<article class="card podcast"><div><div class="time">PODCAST REPLAY</div><h3>'+esc(p.title)+'</h3><p>'+esc(p.description)+'</p><audio controls preload="none" src="'+esc(p.audio_url)+'" style="width:100%;margin-top:12px"></audio></div></article>').join('');}
+  for(const result of [settings,programs,presenters,news,podcasts]) if(result.error) console.warn('Radio content loading:',result.error.message);
+})().catch(err=>console.warn('Radio connection unavailable:',err));
+</script>
+
 </body></html>
