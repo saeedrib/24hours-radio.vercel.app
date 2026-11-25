@@ -14,11 +14,8 @@ The radio system is connected to the existing **Student Loan Found** Supabase pr
 
 The public website reads published programs, presenters, news, podcasts, and the live stream URL from these radio tables. Staff use `admin.html` to manage station content.
 
-## First Admin setup
-1. Create a staff account in Supabase Authentication (email/password).
-2. Send the exact account email to the project owner/admin so that the account can be promoted to the first Radio Admin.
-3. The first Radio Admin can then assign DJ roles from the staff portal.
-4. Do not allow public visitors to choose an Admin or DJ role.
+## First Admin account
+The account `yahyasaidumodibbo@gmail.com` has already been assigned the `admin` role in `radio_profiles`. Sign in at `admin.html` using that existing Supabase Auth account and its password. The Radio Admin can then assign DJ roles from the staff portal. Do not allow public visitors to choose an Admin or DJ role.
 
 The frontend uses only the Supabase publishable key. Never expose a service-role or secret key.
 
